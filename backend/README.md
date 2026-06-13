@@ -1,85 +1,45 @@
-# loading.app — backend
+#  Loading.app
 
-Backend Flask que serve como proxy da API da Anthropic para o loading.app.
+Eu sempre tive dificuldade em organizar meus estudos e tarefas do dia a dia. Notas e planilhas até ajudavam, mas não eram práticas no celular e não me davam consistência.
 
-## Estrutura
+Por isso criei o **Loading.app**, um projeto pessoal de produtividade que junta organização de tarefas com uma assistente de IA para me ajudar a manter o foco e priorizar o que realmente importa no dia.
 
-```
-loading-app-backend/
-├── server.py           # servidor Flask
-├── requirements.txt    # dependências Python
-├── Procfile            # pra Railway/Render
-├── .env.example        # modelo do .env
-├── .gitignore
-└── static/
-    └── loading-app.html  # frontend
-```
+A ideia é transformar a rotina em algo mais leve, onde eu posso conversar com o sistema e receber ajuda para organizar minhas tarefas.
 
-## Rodar localmente
+⚠️ A parte de IA ainda está em evolução.
 
-```bash
-# 1. Instalar dependências
-pip install -r requirements.txt
+##  Funcionalidades
 
-# 2. Criar o .env
-cp .env.example .env
-# edite o .env e coloque sua ANTHROPIC_API_KEY
+- Organização de tarefas do dia  
+- Assistente de IA para apoio e planejamento  
+- Respostas baseadas no contexto do usuário  
+- API backend simples  
+- Estrutura pronta para evolução  
 
-# 3. Rodar
-python server.py
-```
+##  Tecnologias
 
-Acesse em: http://localhost:5000
+- Python  
+- Flask  
+- API REST  
+- Inteligência Artificial (LLMs como Claude/Gemini)  
+- Git e GitHub  
+- Railway (deploy em cloud)  
 
----
 
-## Deploy no Railway (recomendado — gratuito)
+## O que aprendi
 
-1. Crie uma conta em [railway.app](https://railway.app)
-2. Crie um novo projeto → "Deploy from GitHub repo"
-3. Conecte esse repositório
-4. Vá em **Variables** e adicione:
-   - `ANTHROPIC_API_KEY` = sua chave
-   - `FLASK_ENV` = `production`
-5. Railway detecta o `Procfile` e faz o deploy automaticamente
-6. Copie a URL gerada (ex: `https://loading-app-production.up.railway.app`)
+Esse projeto foi importante para entender como funciona um backend de verdade e como integrar inteligência artificial em uma aplicação real.
 
----
+Também aprendi sobre APIs, estrutura de servidor, deploy em cloud e como pensar um projeto como produto, não só como código.
 
-## Deploy no Render (alternativa gratuita)
 
-1. Crie conta em [render.com](https://render.com)
-2. New → **Web Service** → conecte o repositório
-3. Build command: `pip install -r requirements.txt`
-4. Start command: `gunicorn server:app --bind 0.0.0.0:$PORT`
-5. Adicione a variável `ANTHROPIC_API_KEY` nas Environment Variables
+##  Visão do projeto
 
----
+Um copiloto de produtividade pessoal simples, que vai evoluindo conforme eu aprendo mais sobre backend e IA.
 
-## API
 
-### `POST /chat`
-```json
-{
-  "messages": [
-    { "role": "user", "content": "organize meu dia" }
-  ],
-  "context": "Alta prioridade: reunião 14h..."
-}
-```
-Resposta:
-```json
-{ "reply": "Vamos lá! Pelo contexto..." }
-```
+##  Demonstração
 
-### `GET /health`
-```json
-{ "status": "ok", "api_key_configured": true }
-```
+Aqui está uma demonstração rápida do funcionamento do Loading.app:
 
----
-
-## Rate limiting
-
-Por padrão: **15 mensagens por IP por minuto**.
-Mude com a variável `RATE_LIMIT_PER_MINUTE` no `.env`.
+![Demo Loading.app](assets/demo.gif)
