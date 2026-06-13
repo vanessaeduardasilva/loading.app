@@ -368,10 +368,7 @@ function showTyping() {
 }
 function hideTyping() { const el = document.getElementById('typing'); if(el) el.remove(); }
 
-// ⚠️ Troque pela URL do seu backend após o deploy
-// Ex: 'https://loading-app.up.railway.app'
-// Rodando local: 'http://localhost:5000'
-const BACKEND_URL = 'http://localhost:5000';
+const BACKEND_URL = 'https://loadingapp-production.up.railway.app';
 
 async function sendAI() {
   const inp = document.getElementById('ai-in');

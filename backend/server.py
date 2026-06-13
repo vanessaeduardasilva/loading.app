@@ -1,20 +1,3 @@
-"""
-server.py — Backend do loading.app
-
-Esse servidor faz o meio de campo entre o frontend e a API da Anthropic.
-A chave da API fica aqui no servidor, protegida, longe do navegador.
-
-Como rodar localmente:
-    1. pip install -r requirements.txt
-    2. Crie um .env com ANTHROPIC_API_KEY=sk-ant-...
-    3. python server.py
-
-Como fazer deploy (Railway, Render, Fly.io):
-    - Suba esse repositório
-    - Configure a variável de ambiente ANTHROPIC_API_KEY no painel
-    - Pronto! O servidor sobe automaticamente
-"""
-
 import os
 import time
 from collections import defaultdict
@@ -30,16 +13,12 @@ CORS(app)
 
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
-# ── Rate limiting simples ──────────────────────────────────────────────────────
-# Limita quantas mensagens cada IP pode mandar por minuto
-# pra evitar que alguém abuse e estoure sua conta
 RATE_LIMIT = int(os.getenv("RATE_LIMIT_PER_MINUTE", 15))
-rate_store = defaultdict(list)  # { "ip": [timestamp, timestamp, ...] }
+rate_store = defaultdict(list) 
 
 def is_rate_limited(ip: str) -> bool:
     now = time.time()
     minute_ago = now - 60
-    # Remove timestamps antigos (mais de 1 minuto atrás)
     rate_store[ip] = [t for t in rate_store[ip] if t > minute_ago]
     if len(rate_store[ip]) >= RATE_LIMIT:
         return True
@@ -47,7 +26,6 @@ def is_rate_limited(ip: str) -> bool:
     return False
 
 
-# ── Rota principal: chat ───────────────────────────────────────────────────────
 @app.route("/chat", methods=["POST"])
 def chat():
     """
@@ -83,11 +61,9 @@ def chat():
     messages = data.get("messages", [])
     context = data.get("context", "Nenhuma tarefa cadastrada ainda.")
 
-    # Valida que tem pelo menos uma mensagem do usuário
     if not messages or not any(m.get("role") == "user" for m in messages):
         return jsonify({"error": "Mensagem não informada."}), 400
 
-    # Garante que as mensagens têm o formato certo
     clean_messages = [
         {"role": m["role"], "content": str(m["content"])}
         for m in messages
