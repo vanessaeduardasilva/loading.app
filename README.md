@@ -42,4 +42,4 @@ Um copiloto de produtividade pessoal simples, que vai evoluindo conforme eu apre
 
 Aqui está uma demonstração rápida do funcionamento do Loading.app:
 
-![Demo Loading.app](assets/demo.gif) 
+![Demo Loading.app](assets/demo.gif)
