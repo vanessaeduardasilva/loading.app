@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>loading.app — gestão de tempo</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@300;400;500;600&display=swap');
+:root {
+  --bg: #0d0a0e; --surface: #13101a; --surface2: #1a1624; --border: #2a2438;
+  --accent: #ff2d78; --accent2: #ff85b3; --text: #f0eef2; --muted: #7b7080;
+  --danger: #ff6b6b; --warn: #ffb347;
+  --mono: 'Space Mono', monospace; --sans: 'Sora', sans-serif;
+}
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; overflow: hidden; }
+.app { display: grid; grid-template-rows: 52px 1fr; grid-template-columns: 210px 1fr; height: 100vh; }
+.topbar { grid-column: 1/-1; display: flex; align-items: center; padding: 0 18px; background: var(--surface); border-bottom: 1px solid var(--border); gap: 14px; z-index:10; }
+.logo { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--accent); letter-spacing: -0.5px; }
+.logo span { color: var(--muted); }
+.topbar-date { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-left: auto; }
+.stats-bar { display: flex; gap: 20px; align-items: center; }
+.stat-pill { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+.stat-pill strong { color: var(--text); font-weight: 500; }
+.stat-dot { width: 6px; height: 6px; border-radius: 50%; }
+.sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 14px 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
+.sidebar-section { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: .1em; padding: 10px 8px 5px; text-transform: uppercase; }
+.nav-item { display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; color: var(--muted); transition: all .15s; border: 1px solid transparent; user-select: none; }
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active { background: rgba(255,45,120,.08); color: var(--accent); border-color: rgba(255,45,120,.15); }
+.nav-icon { font-size: 14px; width: 17px; text-align: center; }
+.sidebar-bottom { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border); }
+.progress-block { padding: 8px 10px; background: var(--surface2); border-radius: 8px; border: 1px solid var(--border); }
+.prog-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+.prog-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.prog-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .4s ease; }
+.prog-nums { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 4px; }
+.main { overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 18px; }
+.page { display: none; flex-direction: column; gap: 18px; }
+.page.active { display: flex; }
+.ai-page { display: none; flex-direction: column; height: calc(100vh - 52px); overflow: hidden; }
+.ai-page.active { display: flex; }
+.page-title { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.page-sub { font-size: 11px; color: var(--muted); }
+.section-label { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px; }
+.summary-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+.summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+.summary-card .s-num { font-family: var(--mono); font-size: 26px; font-weight: 700; color: var(--text); }
+.summary-card .s-label { font-size: 10px; color: var(--muted); margin-top: 3px; }
+.summary-card .s-dot { width: 7px; height: 7px; border-radius: 50%; margin-bottom: 8px; }
+.add-row { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+.add-row input[type="text"] { flex: 1; min-width: 120px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text); font-family: var(--sans); font-size: 12px; outline: none; transition: border-color .15s; }
+.add-row input[type="text"]:focus { border-color: rgba(255,45,120,.4); }
+.add-row input::placeholder { color: var(--muted); }
+.prio-sel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 9px; color: var(--text); font-size: 11px; cursor: pointer; outline: none; }
+.dur-in { width: 64px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 9px; color: var(--text); font-size: 11px; font-family: var(--mono); outline: none; text-align: center; }
+.dur-in::placeholder { color: var(--muted); }
+.btn-add { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-family: var(--mono); font-size: 11px; font-weight: 700; cursor: pointer; transition: opacity .15s; white-space: nowrap; }
+.btn-add:hover { opacity: .85; }
+.kanban { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+.col { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; min-height: 120px; }
+.col-head { display: flex; align-items: center; gap: 7px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.col-badge { width: 6px; height: 6px; border-radius: 50%; }
+.b-alta { background: #ff6b6b; } .b-media { background: #ffb347; } .b-baixa { background: var(--accent2); }
+.col-title { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .05em; }
+.t-alta { color: #ff6b6b; } .t-media { color: #ffb347; } .t-baixa { color: var(--accent2); }
+.col-cnt { margin-left: auto; background: var(--surface2); border-radius: 4px; padding: 2px 6px; font-family: var(--mono); font-size: 9px; color: var(--muted); }
+.col-body { padding: 8px; display: flex; flex-direction: column; gap: 5px; }
+.task { background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 8px 10px; display: flex; align-items: flex-start; gap: 7px; transition: border-color .15s; }
+.task:hover { border-color: rgba(255,255,255,.1); }
+.task.done { opacity: .35; }
+.task.done .task-name { text-decoration: line-through; }
+.task-cb { width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid var(--border); flex-shrink: 0; cursor: pointer; margin-top: 1px; display: flex; align-items: center; justify-content: center; transition: all .12s; }
+.task-cb:hover { border-color: var(--accent); }
+.task-cb.chk { background: var(--accent); border-color: var(--accent); }
+.task-cb.chk::after { content:''; width: 4px; height: 3px; border-left: 1.5px solid #fff; border-bottom: 1.5px solid #fff; transform: rotate(-45deg) translateY(-0.5px); display: block; }
+.task-info { flex: 1; min-width: 0; }
+.task-name { font-size: 11px; line-height: 1.4; color: var(--text); word-break: break-word; }
+.task-dur { font-family: var(--mono); font-size: 9px; color: var(--muted); margin-top: 2px; }
+.task-rm { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 11px; opacity: .4; padding: 0 2px; flex-shrink: 0; }
+.task-rm:hover { opacity: 1; color: var(--danger); }
+.empty-msg { font-size: 10px; color: var(--muted); opacity: .5; text-align: center; padding: 16px 0; }
+.timeline-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.timeline-row input[type="time"] { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 7px 9px; color: var(--text); font-family: var(--mono); font-size: 11px; outline: none; }
+.timeline-row input[type="text"] { flex: 1; min-width: 120px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 7px 11px; color: var(--text); font-size: 12px; outline: none; }
+.timeline-row input::placeholder { color: var(--muted); }
+.btn-bloco { background: rgba(255,133,179,.12); color: var(--accent2); border: 1px solid rgba(255,133,179,.25); border-radius: 8px; padding: 7px 12px; font-family: var(--mono); font-size: 10px; cursor: pointer; transition: all .15s; white-space: nowrap; }
+.btn-bloco:hover { background: rgba(255,133,179,.2); }
+.blocos-list { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+.bloco { display: flex; align-items: center; gap: 9px; padding: 8px 11px; background: var(--surface); border: 1px solid var(--border); border-radius: 7px; }
+.bloco-time { font-family: var(--mono); font-size: 10px; color: var(--muted); min-width: 40px; }
+.bloco-bar { width: 3px; height: 22px; border-radius: 2px; flex-shrink: 0; }
+.bloco-label { font-size: 12px; color: var(--text); flex: 1; }
+.bloco-rm { background: none; border: none; color: var(--muted); cursor: pointer; opacity: .4; font-size: 11px; }
+.bloco-rm:hover { opacity: 1; color: var(--danger); }
+.ai-header { padding: 12px 16px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.ai-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; display: inline-block; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+.ai-msgs { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.msg { display: flex; flex-direction: column; gap: 3px; }
+.msg-label { font-family: var(--mono); font-size: 9px; color: var(--muted); padding: 0 4px; }
+.msg.user .msg-label { text-align: right; }
+.msg.ai .msg-bubble { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 8px 11px; border-radius: 10px 10px 10px 2px; font-size: 12px; line-height: 1.55; }
+.msg.user .msg-bubble { background: rgba(255,45,120,.1); border: 1px solid rgba(255,45,120,.2); color: var(--text); padding: 8px 11px; margin-left: auto; border-radius: 10px 10px 2px 10px; font-size: 12px; line-height: 1.55; max-width: 85%; }
+.typing { display: flex; gap: 4px; padding: 9px 11px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px 10px 10px 2px; width: fit-content; }
+.typing span { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); animation: bounce 1.2s infinite; }
+.typing span:nth-child(2){animation-delay:.2s} .typing span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+.chip-row { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip { background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; font-size: 10px; color: var(--muted); cursor: pointer; font-family: var(--mono); transition: all .12s; }
+.chip:hover { border-color: rgba(255,45,120,.4); color: var(--accent); }
+.ai-footer { padding: 10px 14px; border-top: 1px solid var(--border); flex-shrink: 0; }
+.ai-input-row { display: flex; gap: 7px; align-items: flex-end; }
+.ai-input-row textarea { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 11px; color: var(--text); font-family: var(--sans); font-size: 12px; resize: none; outline: none; height: 36px; max-height: 72px; transition: border-color .15s; line-height: 1.4; }
+.ai-input-row textarea:focus { border-color: rgba(255,45,120,.35); }
+.ai-input-row textarea::placeholder { color: var(--muted); }
+.btn-send { background: var(--accent); color: #fff; border: none; border-radius: 8px; width: 34px; height: 36px; cursor: pointer; font-size: 15px; flex-shrink: 0; transition: opacity .15s; display: flex; align-items: center; justify-content: center; }
+.btn-send:hover { opacity: .85; }
+.ai-hint { font-size: 9px; color: var(--muted); margin-top: 5px; font-family: var(--mono); }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="logo">loading<span>.app</span></div>
+    <div class="stats-bar">
+      <div class="stat-pill"><div class="stat-dot" style="background:var(--accent)"></div>concluídas <strong id="tb-done">0</strong></div>
+      <div class="stat-pill"><div class="stat-dot" style="background:#ffb347"></div>pendentes <strong id="tb-pend">0</strong></div>
+      <div class="stat-pill"><div class="stat-dot" style="background:#ff6b6b"></div>alta <strong id="tb-alta">0</strong></div>
+    </div>
+    <div class="topbar-date" id="top-date"></div>
+  </div>
+  <div class="sidebar">
+    <div class="sidebar-section">menu</div>
+    <div class="nav-item active" onclick="navigate('dashboard')"><span class="nav-icon">◈</span> dashboard</div>
+    <div class="nav-item" onclick="navigate('tarefas')"><span class="nav-icon">◎</span> tarefas</div>
+    <div class="nav-item" onclick="navigate('blocos')"><span class="nav-icon">◷</span> blocos</div>
+    <div class="nav-item" onclick="navigate('ia')"><span class="nav-icon">✦</span> assistente IA</div>
+    <div class="sidebar-section" style="margin-top:6px">agora</div>
+    <div class="nav-item" style="cursor:default"><span class="nav-icon">▸</span><span id="sb-time" style="font-family:var(--mono);font-size:11px">--:--</span></div>
+    <div class="sidebar-bottom">
+      <div class="progress-block">
+        <div class="prog-label">progresso do dia</div>
+        <div class="prog-bar"><div class="prog-fill" id="prog" style="width:0%"></div></div>
+        <div class="prog-nums"><span id="prog-done">0 feitas</span><span id="prog-total">0 total</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="main" id="main-content">
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div><div class="page-title">dashboard</div><div class="page-sub">visão geral do seu dia</div></div>
+      <div class="summary-grid">
+        <div class="summary-card"><div class="s-dot" style="background:var(--accent)"></div><div class="s-num" id="d-done">0</div><div class="s-label">concluídas</div></div>
+        <div class="summary-card"><div class="s-dot" style="background:#ffb347"></div><div class="s-num" id="d-pend">0</div><div class="s-label">pendentes</div></div>
+        <div class="summary-card"><div class="s-dot" style="background:#ff6b6b"></div><div class="s-num" id="d-alta">0</div><div class="s-label">alta prioridade</div></div>
+      </div>
+      <div>
+        <div class="section-label">progresso</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:8px;"><span>tarefas do dia</span><span id="d-perc">0%</span></div>
+          <div class="prog-bar" style="height:8px;"><div class="prog-fill" id="d-prog" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div>
+        <div class="section-label">próximos blocos</div>
+        <div id="d-blocos-preview" style="display:flex;flex-direction:column;gap:5px;"><div style="font-size:11px;color:var(--muted);">nenhum bloco — <span style="color:var(--accent);cursor:pointer;" onclick="navigate('blocos')">adicionar</span></div></div>
+      </div>
+      <div>
+        <div class="section-label">alta prioridade</div>
+        <div id="d-tarefas-alta" style="display:flex;flex-direction:column;gap:5px;"><div style="font-size:11px;color:var(--muted);">nenhuma — <span style="color:var(--accent);cursor:pointer;" onclick="navigate('tarefas')">adicionar tarefas</span></div></div>
+      </div>
+    </div>
+    <!-- TAREFAS -->
+    <div class="page" id="page-tarefas">
+      <div><div class="page-title">tarefas</div><div class="page-sub">organize por prioridade</div></div>
+      <div>
+        <div class="section-label">nova tarefa</div>
+        <div class="add-row">
+          <input type="text" id="t-input" placeholder="o que você precisa fazer hoje?"/>
+          <select class="prio-sel" id="t-prio"><option value="alta">🔴 alta</option><option value="media" selected>🟡 média</option><option value="baixa">🟢 baixa</option></select>
+          <input class="dur-in" type="text" id="t-dur" placeholder="2h"/>
+          <button class="btn-add" onclick="addTask()">+ add</button>
+        </div>
+      </div>
+      <div>
+        <div class="section-label">kanban</div>
+        <div class="kanban">
+          <div class="col"><div class="col-head"><div class="col-badge b-alta"></div><span class="col-title t-alta">ALTA</span><span class="col-cnt" id="c-alta">0</span></div><div class="col-body" id="k-alta"></div></div>
+          <div class="col"><div class="col-head"><div class="col-badge b-media"></div><span class="col-title t-media">MÉDIA</span><span class="col-cnt" id="c-media">0</span></div><div class="col-body" id="k-media"></div></div>
+          <div class="col"><div class="col-head"><div class="col-badge b-baixa"></div><span class="col-title t-baixa">BAIXA</span><span class="col-cnt" id="c-baixa">0</span></div><div class="col-body" id="k-baixa"></div></div>
+        </div>
+      </div>
+    </div>
+    <!-- BLOCOS -->
+    <div class="page" id="page-blocos">
+      <div><div class="page-title">blocos de tempo</div><div class="page-sub">planeje as horas do seu dia</div></div>
+      <div>
+        <div class="section-label">novo bloco</div>
+        <div class="timeline-row">
+          <input type="time" id="b-hora" value="09:00"/>
+          <input type="text" id="b-nome" placeholder="ex: estudar Python, reunião, academia..."/>
+          <button class="btn-bloco" onclick="addBloco()">+ adicionar</button>
+        </div>
+      </div>
+      <div><div class="section-label">agenda do dia</div><div class="blocos-list" id="blocos"></div></div>
+    </div>
+  </div>
+  <!-- IA -->
+  <div class="ai-page" id="page-ia">
+    <div class="ai-header">
+      <div class="ai-dot"></div>
+      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--accent);">assistente IA</span>
+      <span style="font-size:10px;color:var(--muted);margin-left:auto;">online ✦</span>
+    </div>
+    <div class="ai-msgs" id="msgs">
+      <div class="msg ai">
+        <div class="msg-label">assistente</div>
+        <div class="msg-bubble">Oi! Sou sua IA de gestão de tempo. Me conta o que você precisa fazer hoje e eu te ajudo a organizar as prioridades. 🌸</div>
+      </div>
+      <div class="chip-row">
+        <div class="chip" onclick="quickPrompt('organize meu dia')">organize meu dia</div>
+        <div class="chip" onclick="quickPrompt('quais são minhas prioridades?')">ver prioridades</div>
+        <div class="chip" onclick="quickPrompt('estou travada, o que começo primeiro?')">por onde começo?</div>
+        <div class="chip" onclick="quickPrompt('monte blocos de tempo para mim')">sugerir blocos</div>
+      </div>
+    </div>
+    <div class="ai-footer">
+      <div class="ai-input-row">
+        <textarea id="ai-in" placeholder="pergunte algo ou peça ajuda..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAI();}"></textarea>
+        <button class="btn-send" onclick="sendAI()">↑</button>
+      </div>
+      <div class="ai-hint">enter pra enviar · shift+enter pra nova linha</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let tasks = [], blocos = [], tid = 0, bid = 0;
+const CORES = ['#ff2d78','#ff85b3','#ffb347','#ff6b6b','#c8a4ff'];
+let conversationHistory = [];
+
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.ai-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const target = document.getElementById('page-' + page);
+  if (target) target.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + page + "'")) n.classList.add('active');
+  });
+  if (page === 'dashboard') updateDashboard();
+}
+
+function startApp() {
+  const now = new Date();
+  document.getElementById('top-date').textContent = now.toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long' });
+  setInterval(() => {
+    document.getElementById('sb-time').textContent = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+  }, 1000);
+  renderTasks(); renderBlocos(); updateDashboard();
+}
+
+function addTask() {
+  const inp = document.getElementById('t-input');
+  const name = inp.value.trim();
+  if (!name) return;
+  tasks.push({ id: tid++, name, prio: document.getElementById('t-prio').value, dur: document.getElementById('t-dur').value.trim(), done: false });
+  inp.value = ''; document.getElementById('t-dur').value = '';
+  renderTasks(); updateDashboard();
+}
+function toggleTask(id) { const t = tasks.find(t=>t.id===id); if(t) t.done=!t.done; renderTasks(); updateDashboard(); }
+function delTask(id) { tasks = tasks.filter(t=>t.id!==id); renderTasks(); updateDashboard(); }
+function renderTasks() {
+  const cols = { alta:[], media:[], baixa:[] };
+  tasks.forEach(t => cols[t.prio].push(t));
+  ['alta','media','baixa'].forEach(p => {
+    const el = document.getElementById('k-'+p), cnt = document.getElementById('c-'+p);
+    cnt.textContent = cols[p].length;
+    if (!cols[p].length) { el.innerHTML = '<div class="empty-msg">nenhuma</div>'; return; }
+    el.innerHTML = cols[p].map(t => `
+      <div class="task ${t.done?'done':''}">
+        <div class="task-cb ${t.done?'chk':''}" onclick="toggleTask(${t.id})"></div>
+        <div class="task-info"><div class="task-name">${t.name}</div>${t.dur?`<div class="task-dur">⏱ ${t.dur}</div>`:''}</div>
+        <button class="task-rm" onclick="delTask(${t.id})">✕</button>
+      </div>`).join('');
+  });
+  const total = tasks.length, done = tasks.filter(t=>t.done).length;
+  document.getElementById('tb-done').textContent = done;
+  document.getElementById('tb-pend').textContent = total - done;
+  document.getElementById('tb-alta').textContent = tasks.filter(t=>t.prio==='alta'&&!t.done).length;
+  document.getElementById('prog').style.width = total ? Math.round(done/total*100)+'%' : '0%';
+  document.getElementById('prog-done').textContent = done + ' feitas';
+  document.getElementById('prog-total').textContent = total + ' total';
+}
+
+function addBloco() {
+  const h = document.getElementById('b-hora').value, n = document.getElementById('b-nome').value.trim();
+  if (!h || !n) return;
+  blocos.push({ id: bid++, h, n, cor: CORES[bid % CORES.length] });
+  blocos.sort((a,b) => a.h.localeCompare(b.h));
+  document.getElementById('b-nome').value = '';
+  renderBlocos(); updateDashboard();
+}
+function delBloco(id) { blocos = blocos.filter(b=>b.id!==id); renderBlocos(); updateDashboard(); }
+function renderBlocos() {
+  const el = document.getElementById('blocos');
+  if (!blocos.length) { el.innerHTML = '<div style="font-size:11px;color:var(--muted);">nenhum bloco ainda</div>'; return; }
+  el.innerHTML = blocos.map(b => `
+    <div class="bloco">
+      <span class="bloco-time">${b.h}</span>
+      <div class="bloco-bar" style="background:${b.cor}"></div>
+      <span class="bloco-label">${b.n}</span>
+      <button class="bloco-rm" onclick="delBloco(${b.id})">✕</button>
+    </div>`).join('');
+}
+
+function updateDashboard() {
+  const total = tasks.length, done = tasks.filter(t=>t.done).length;
+  const alta = tasks.filter(t=>t.prio==='alta'&&!t.done);
+  const perc = total ? Math.round(done/total*100) : 0;
+  document.getElementById('d-done').textContent = done;
+  document.getElementById('d-pend').textContent = total - done;
+  document.getElementById('d-alta').textContent = alta.length;
+  document.getElementById('d-perc').textContent = perc + '%';
+  document.getElementById('d-prog').style.width = perc + '%';
+  const dblocos = document.getElementById('d-blocos-preview');
+  dblocos.innerHTML = !blocos.length
+    ? '<div style="font-size:11px;color:var(--muted);">nenhum bloco — <span style="color:var(--accent);cursor:pointer;" onclick="navigate(\'blocos\')">adicionar</span></div>'
+    : blocos.slice(0,4).map(b => `<div class="bloco"><span class="bloco-time">${b.h}</span><div class="bloco-bar" style="background:${b.cor}"></div><span class="bloco-label">${b.n}</span></div>`).join('') + (blocos.length>4?`<div style="font-size:10px;color:var(--muted);padding:3px 0;">+${blocos.length-4} blocos</div>`:'');
+  const dalta = document.getElementById('d-tarefas-alta');
+  dalta.innerHTML = !alta.length
+    ? '<div style="font-size:11px;color:var(--muted);">nenhuma — <span style="color:var(--accent);cursor:pointer;" onclick="navigate(\'tarefas\')">adicionar tarefas</span></div>'
+    : alta.slice(0,5).map(t => `<div class="task"><div class="task-cb" onclick="toggleTask(${t.id})"></div><div class="task-info"><div class="task-name">${t.name}</div>${t.dur?`<div class="task-dur">⏱ ${t.dur}</div>`:''}</div><button class="task-rm" onclick="delTask(${t.id})">✕</button></div>`).join('');
+}
+
+function getContext() {
+  const alta = tasks.filter(t=>t.prio==='alta'&&!t.done).map(t=>t.name);
+  const media = tasks.filter(t=>t.prio==='media'&&!t.done).map(t=>t.name);
+  const baixa = tasks.filter(t=>t.prio==='baixa'&&!t.done).map(t=>t.name);
+  const feitas = tasks.filter(t=>t.done).map(t=>t.name);
+  const bls = blocos.map(b=>`${b.h} — ${b.n}`);
+  return `Contexto atual do app:
+- Alta prioridade pendente: ${alta.length ? alta.join(', ') : 'nenhuma'}
+- Média prioridade pendente: ${media.length ? media.join(', ') : 'nenhuma'}
+- Baixa prioridade pendente: ${baixa.length ? baixa.join(', ') : 'nenhuma'}
+- Concluídas hoje: ${feitas.length ? feitas.join(', ') : 'nenhuma'}
+- Blocos planejados: ${bls.length ? bls.join(' | ') : 'nenhum'}
+- Hora atual: ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`;
+}
+
+function addMsg(role, text) {
+  const msgs = document.getElementById('msgs');
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.innerHTML = `<div class="msg-label">${role==='user'?'você':'assistente'}</div><div class="msg-bubble">${text.replace(/\n/g,'<br>')}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+function showTyping() {
+  const msgs = document.getElementById('msgs');
+  const div = document.createElement('div');
+  div.id = 'typing';
+  div.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+function hideTyping() { const el = document.getElementById('typing'); if(el) el.remove(); }
+
+// ⚠️ Troque pela URL do seu backend após o deploy
+// Ex: 'https://loading-app.up.railway.app'
+// Rodando local: 'http://localhost:5000'
+const BACKEND_URL = 'http://localhost:5000';
+
+async function sendAI() {
+  const inp = document.getElementById('ai-in');
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = ''; inp.style.height = '36px';
+  addMsg('user', text);
+  showTyping();
+  conversationHistory.push({ role: 'user', content: text });
+  try {
+    const res = await fetch(`${BACKEND_URL}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: conversationHistory,
+        context: getContext()
+      })
+    });
+    const data = await res.json();
+    hideTyping();
+    if (data.error) {
+      addMsg('ai', `⚠️ ${data.error}`);
+      conversationHistory.pop();
+      return;
+    }
+    addMsg('ai', data.reply);
+    conversationHistory.push({ role: 'assistant', content: data.reply });
+  } catch(e) {
+    hideTyping();
+    addMsg('ai', '⚠️ Não consegui conectar com o servidor. Tente novamente.');
+    conversationHistory.pop();
+  }
+}
+
+function quickPrompt(text) { document.getElementById('ai-in').value = text; sendAI(); }
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('t-input').addEventListener('keydown', e => { if(e.key==='Enter') addTask(); });
+  document.getElementById('b-nome').addEventListener('keydown', e => { if(e.key==='Enter') addBloco(); });
+  document.getElementById('ai-in').addEventListener('input', function() {
+    this.style.height = '36px'; this.style.height = Math.min(this.scrollHeight,72)+'px';
+  });
+  startApp();
+});
+</script>
+</body>
+</html>
